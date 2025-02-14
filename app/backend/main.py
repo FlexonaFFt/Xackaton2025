@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from routers import items, users
+from routers import queries  
 import os
 import random
 import PyPDF2
@@ -25,6 +26,9 @@ app = FastAPI(
     description="A clean and organized FastAPI application",
     version="1.0.0"
 )
+
+# Add this line after FastAPI initialization
+app.include_router(queries.router)
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "frontend" / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "frontend" / "templates"))
