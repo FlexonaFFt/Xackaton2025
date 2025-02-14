@@ -1,4 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
 from routers import items, users
 import os
 import random
@@ -6,8 +9,12 @@ import PyPDF2
 from docx import Document
 from io import BytesIO
 from PIL import Image
-import easyocr
 import numpy as np
+from fastapi import Request
+import easyocr
+
+# Define base directory
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 app = FastAPI(
     title="My FastAPI App",
@@ -15,8 +22,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Mount static files with absolute path
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "frontend" / "static")), name="static")
+
+# Initialize templates with absolute path
+templates = Jinja2Templates(directory=str(BASE_DIR / "frontend" / "templates"))
+
 # Update allowed extensions
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'png', 'jpg', 'jpeg'}
+
+@app.get("/")
+async def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 def is_allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
