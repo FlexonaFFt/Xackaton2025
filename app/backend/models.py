@@ -8,7 +8,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(7), unique=True, index=True)
-    rating = Column(Integer, default=5)  # Add this line
+    rating = Column(Integer, default=5)  
     created_at = Column(DateTime, default=datetime.utcnow)
     queries = relationship("TextQuery", back_populates="user")
 

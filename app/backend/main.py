@@ -27,9 +27,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add this line after FastAPI initialization
 app.include_router(queries.router)
-
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "frontend" / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "frontend" / "templates"))
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'png', 'jpg', 'jpeg'}
@@ -81,8 +79,8 @@ def extract_text_from_txt(file_content: bytes) -> str:
 @app.post("/upload-file/")
 async def upload_file(
     file: UploadFile = File(...),
-    user_id: str = Form(...),  # Add this parameter
-    db: Session = Depends(database.get_db)  # Add database session
+    user_id: str = Form(...),  
+    db: Session = Depends(database.get_db) 
 ):
     if not is_allowed_file(file.filename):
         raise HTTPException(
@@ -98,8 +96,6 @@ async def upload_file(
     
     try:
         file_extension = file.filename.rsplit('.', 1)[1].lower()
-        
-        # Extract text based on file type
         if file_extension == 'pdf':
             extracted_text = extract_text_from_pdf(file_content)
         elif file_extension == 'docx':
@@ -114,8 +110,6 @@ async def upload_file(
                 detail="Unsupported file type"
             )
 
-        # Process extracted text and save to database
-        # Check if user exists, if not create new user
         user = db.query(models.User).filter(models.User.user_id == user_id).first()
         if not user:
             user = models.User(user_id=user_id)
@@ -123,7 +117,6 @@ async def upload_file(
             db.commit()
             db.refresh(user)
 
-        # Process the extracted text
         processed_text, success = process_text_content(extracted_text)
         
         # Save to database
@@ -137,7 +130,6 @@ async def upload_file(
         db.commit()
         db.refresh(query)
 
-        # Save file
         unique_filename = generate_unique_filename(upload_dir)
         file_location = os.path.join(upload_dir, unique_filename)
         
@@ -186,7 +178,6 @@ async def process_text(
     db: Session = Depends(database.get_db)
 ):
     try:
-        # Check if user exists, if not create new user
         user = db.query(models.User).filter(models.User.user_id == text_request.user_id).first()
         if not user:
             user = models.User(user_id=text_request.user_id)
@@ -197,7 +188,6 @@ async def process_text(
         processed_text, success = process_text_content(text_request.text)
         message = "Text processed successfully" if success else "Text processing failed"
         
-        # Create new text query record
         query = models.TextQuery(
             user_id=text_request.user_id,
             original_text=text_request.text,

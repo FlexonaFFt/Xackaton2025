@@ -113,8 +113,6 @@ async def create_user(
             detail=f"Error creating user: {str(e)}"
         )
 
-# Add these new endpoints after existing ones
-
 @router.get("/statistics/time_period")
 async def get_time_period_statistics(
     period: str = "day",  # "day", "3days", "week"
@@ -165,9 +163,7 @@ async def get_user_statistics(
         ).all()
 
         success_count = len([q for q in queries if q.success])
-        fail_count = len([q for q in queries if not q.success])
-        
-        # Calculate and update rating
+        fail_count = len([q for q in queries if not q.success]) 
         total_fails = fail_count
         if total_fails <= 1:
             new_rating = 5
@@ -180,7 +176,6 @@ async def get_user_statistics(
         else:
             new_rating = 1
 
-        # Update user rating if changed
         if user.rating != new_rating:
             user.rating = new_rating
             db.commit()
