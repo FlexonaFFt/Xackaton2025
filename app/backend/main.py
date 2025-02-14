@@ -1,4 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
+from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -13,7 +14,6 @@ import numpy as np
 from fastapi import Request
 import easyocr
 
-# Define base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 app = FastAPI(
@@ -22,13 +22,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Mount static files with absolute path
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "frontend" / "static")), name="static")
-
-# Initialize templates with absolute path
 templates = Jinja2Templates(directory=str(BASE_DIR / "frontend" / "templates"))
-
-# Update allowed extensions
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'png', 'jpg', 'jpeg'}
 
 @app.get("/")
@@ -63,17 +58,10 @@ def extract_text_from_docx(file_content: bytes) -> str:
     return text
 
 def extract_text_from_image(file_content: bytes) -> str:
-    # Initialize reader with Russian as primary language
     reader = easyocr.Reader(['ru', 'en'], gpu=False)
-    
-    # Open and convert image
     image = Image.open(BytesIO(file_content))
     image_np = np.array(image)
-    
-    # Perform text detection and recognition
     results = reader.readtext(image_np)
-    
-    # Join detected text with newlines
     text = '\n'.join([result[1] for result in results if result[1].strip()])
     return text
 
@@ -130,3 +118,35 @@ async def upload_file(file: UploadFile = File(...)):
         "saved_location": file_location,
         "message": "File content extracted and saved successfully"
     }
+
+class TextRequest(BaseModel):
+    text: str
+
+def process_text_content(text: str) -> tuple[str, bool]:
+    try:
+        punctuation_marks = set('.,!?;:()[]{}«»""\'\"—–-')
+        if any(char in punctuation_marks for char in text):
+            return text, False
+            
+        processed_text = text.replace(" ", "")
+        return processed_text, True
+    except Exception:
+        return text, False
+
+@app.post("/process-text/")
+async def process_text(text_request: TextRequest):
+    try:
+        processed_text, success = process_text_content(text_request.text)
+        message = "Text processed successfully" if success else "Text processing failed"
+        
+        return {
+            "processed_text": processed_text,
+            "success": success,
+            "message": message,
+            "id": random.randint(1000, 9999)
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error processing text: {str(e)}"
+        )
