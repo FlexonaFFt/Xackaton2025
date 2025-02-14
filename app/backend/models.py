@@ -22,3 +22,11 @@ class TextQuery(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(String(7), ForeignKey("users.user_id"))
     user = relationship("User", back_populates="queries")
+
+class FileStatistics(Base):
+    __tablename__ = "file_statistics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    file_type = Column(String, index=True)
+    count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)

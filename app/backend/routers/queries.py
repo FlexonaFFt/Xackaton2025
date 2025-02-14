@@ -212,3 +212,50 @@ async def get_user_rating(
             status_code=400,
             detail=f"Error retrieving user rating: {str(e)}"
         )
+@router.get("/statistics/files")
+async def get_file_statistics(
+    period: str = "all",  # "day", "week", "all"
+    db: Session = Depends(database.get_db)
+):
+    try:
+        query = db.query(models.FileStatistics)
+        
+        if period == "day":
+            start_date = datetime.utcnow() - timedelta(days=1)
+            query = query.filter(models.FileStatistics.created_at >= start_date)
+        elif period == "week":
+            start_date = datetime.utcnow() - timedelta(days=7)
+            query = query.filter(models.FileStatistics.created_at >= start_date)
+        
+        stats = query.all()
+        
+        # Группируем статистику по типам файлов
+        file_stats = {}
+        for stat in stats:
+            if stat.file_type not in file_stats:
+                file_stats[stat.file_type] = 0
+            file_stats[stat.file_type] += stat.count
+            
+        # Сортируем по количеству использований
+        sorted_stats = sorted(
+            file_stats.items(), 
+            key=lambda x: x[1], 
+            reverse=True
+        )
+        
+        return {
+            "period": period,
+            "statistics": [
+                {
+                    "file_type": file_type,
+                    "count": count
+                }
+                for file_type, count in sorted_stats
+            ],
+            "total_files": sum(file_stats.values())
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving file statistics: {str(e)}"
+        )

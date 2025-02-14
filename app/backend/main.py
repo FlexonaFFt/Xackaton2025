@@ -79,23 +79,31 @@ def extract_text_from_txt(file_content: bytes) -> str:
 @app.post("/upload-file/")
 async def upload_file(
     file: UploadFile = File(...),
-    user_id: str = Form(...),  
-    db: Session = Depends(database.get_db) 
+    user_id: str = Form(...),
+    db: Session = Depends(database.get_db)
 ):
-    if not is_allowed_file(file.filename):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Only {', '.join(ALLOWED_EXTENSIONS)} files are allowed"
-        )
-
-    upload_dir = "uploads"
-    if not os.path.exists(upload_dir):
-        os.makedirs(upload_dir)
-
-    file_content = await file.read()
-    
     try:
+        if not is_allowed_file(file.filename):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Only {', '.join(ALLOWED_EXTENSIONS)} files are allowed"
+            )
+
+        upload_dir = "uploads"
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+
+        file_content = await file.read()
         file_extension = file.filename.rsplit('.', 1)[1].lower()
+        
+        # Update file statistics
+        file_stat = models.FileStatistics(
+            file_type=file_extension,
+            count=1
+        )
+        db.add(file_stat)
+        db.commit()
+
         if file_extension == 'pdf':
             extracted_text = extract_text_from_pdf(file_content)
         elif file_extension == 'docx':
@@ -151,21 +159,7 @@ async def upload_file(
             detail=f"Error processing file: {str(e)}"
         )
 
-    # Тут генерируем уникальное имя файла
-    unique_filename = generate_unique_filename(upload_dir)
-    file_location = os.path.join(upload_dir, unique_filename)
-    
-    with open(file_location, "w", encoding='utf-8') as file_object:
-        file_object.write(extracted_text)
-    
-    return {
-        "original_filename": file.filename,
-        "saved_filename": unique_filename,
-        "saved_location": file_location,
-        "message": "File content extracted and saved successfully"
-    }
-
-
+# Move this line to the top level of the file, after all imports
 models.Base.metadata.create_all(bind=database.engine)
 
 class TextRequest(BaseModel):
