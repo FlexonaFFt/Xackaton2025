@@ -5,6 +5,9 @@ import random
 import PyPDF2
 from docx import Document
 from io import BytesIO
+from PIL import Image
+import easyocr
+import numpy as np
 
 app = FastAPI(
     title="My FastAPI App",
@@ -12,15 +15,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Define allowed file extensions
-ALLOWED_EXTENSIONS = {'pdf', 'docx'}
+# Update allowed extensions
+ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'png', 'jpg', 'jpeg'}
 
 def is_allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def generate_unique_filename(upload_dir: str) -> str:
     while True:
-        # Generate 6-digit random number
+        # Генерируем id для файла 
         filename = ''.join([str(random.randint(0, 9)) for _ in range(6)])
         file_path = os.path.join(upload_dir, filename)
         if not os.path.exists(file_path):
@@ -42,13 +45,23 @@ def extract_text_from_docx(file_content: bytes) -> str:
         text += paragraph.text + "\n"
     return text
 
-# Include routers
-app.include_router(users.router)
-app.include_router(items.router)
+def extract_text_from_image(file_content: bytes) -> str:
+    # Initialize reader with Russian as primary language
+    reader = easyocr.Reader(['ru', 'en'], gpu=False)
+    
+    # Open and convert image
+    image = Image.open(BytesIO(file_content))
+    image_np = np.array(image)
+    
+    # Perform text detection and recognition
+    results = reader.readtext(image_np)
+    
+    # Join detected text with newlines
+    text = '\n'.join([result[1] for result in results if result[1].strip()])
+    return text
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to my FastAPI application!"}
+def extract_text_from_txt(file_content: bytes) -> str:
+    return file_content.decode('utf-8')
 
 @app.post("/upload-file/")
 async def upload_file(file: UploadFile = File(...)):
@@ -62,15 +75,25 @@ async def upload_file(file: UploadFile = File(...)):
     if not os.path.exists(upload_dir):
         os.makedirs(upload_dir)
 
-    # Read file content
     file_content = await file.read()
     
-    # Extract text based on file type
     try:
-        if file.filename.lower().endswith('.pdf'):
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        
+        # Определяем тип отправленного файла 
+        if file_extension == 'pdf':
             extracted_text = extract_text_from_pdf(file_content)
-        else:  # docx
+        elif file_extension == 'docx':
             extracted_text = extract_text_from_docx(file_content)
+        elif file_extension == 'txt':
+            extracted_text = extract_text_from_txt(file_content)
+        elif file_extension in {'png', 'jpg', 'jpeg'}:
+            extracted_text = extract_text_from_image(file_content)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported file type"
+            )
     except Exception as e:
         raise HTTPException(
             status_code=400,
