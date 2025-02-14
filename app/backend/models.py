@@ -1,15 +1,14 @@
-from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from database import Base
 from datetime import datetime
-
-Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(7), unique=True, index=True)
+    rating = Column(Integer, default=5)  # Add this line
     created_at = Column(DateTime, default=datetime.utcnow)
     queries = relationship("TextQuery", back_populates="user")
 
