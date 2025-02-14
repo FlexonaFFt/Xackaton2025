@@ -1,5 +1,7 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, Form, File, UploadFile, HTTPException
 from pydantic import BaseModel
+from fastapi import Request
+from fastapi import Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -11,8 +13,10 @@ from docx import Document
 from io import BytesIO
 from PIL import Image
 import numpy as np
-from fastapi import Request
 import easyocr
+from sqlalchemy.orm import Session
+import models
+import database
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -26,10 +30,12 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "frontend" / "static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "frontend" / "templates"))
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'png', 'jpg', 'jpeg'}
 
+# Урлы для frontend
 @app.get("/")
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+# Функции для обработки файлов 
 def is_allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -69,7 +75,11 @@ def extract_text_from_txt(file_content: bytes) -> str:
     return file_content.decode('utf-8')
 
 @app.post("/upload-file/")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    user_id: str = Form(...),  # Add this parameter
+    db: Session = Depends(database.get_db)  # Add database session
+):
     if not is_allowed_file(file.filename):
         raise HTTPException(
             status_code=400,
@@ -85,7 +95,7 @@ async def upload_file(file: UploadFile = File(...)):
     try:
         file_extension = file.filename.rsplit('.', 1)[1].lower()
         
-        # Определяем тип отправленного файла 
+        # Extract text based on file type
         if file_extension == 'pdf':
             extracted_text = extract_text_from_pdf(file_content)
         elif file_extension == 'docx':
@@ -99,6 +109,46 @@ async def upload_file(file: UploadFile = File(...)):
                 status_code=400,
                 detail="Unsupported file type"
             )
+
+        # Process extracted text and save to database
+        # Check if user exists, if not create new user
+        user = db.query(models.User).filter(models.User.user_id == user_id).first()
+        if not user:
+            user = models.User(user_id=user_id)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        # Process the extracted text
+        processed_text, success = process_text_content(extracted_text)
+        
+        # Save to database
+        query = models.TextQuery(
+            user_id=user_id,
+            original_text=extracted_text,
+            processed_text=processed_text,
+            success=success
+        )
+        db.add(query)
+        db.commit()
+        db.refresh(query)
+
+        # Save file
+        unique_filename = generate_unique_filename(upload_dir)
+        file_location = os.path.join(upload_dir, unique_filename)
+        
+        with open(file_location, "w", encoding='utf-8') as file_object:
+            file_object.write(extracted_text)
+        
+        return {
+            "original_filename": file.filename,
+            "saved_filename": unique_filename,
+            "saved_location": file_location,
+            "processed_text": processed_text,
+            "success": success,
+            "message": "File processed and saved successfully",
+            "query_id": query.id
+        }
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -119,8 +169,52 @@ async def upload_file(file: UploadFile = File(...)):
         "message": "File content extracted and saved successfully"
     }
 
+
+models.Base.metadata.create_all(bind=database.engine)
+
 class TextRequest(BaseModel):
     text: str
+    user_id: str
+
+@app.post("/process-text/")
+async def process_text(
+    text_request: TextRequest,
+    db: Session = Depends(database.get_db)
+):
+    try:
+        # Check if user exists, if not create new user
+        user = db.query(models.User).filter(models.User.user_id == text_request.user_id).first()
+        if not user:
+            user = models.User(user_id=text_request.user_id)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        processed_text, success = process_text_content(text_request.text)
+        message = "Text processed successfully" if success else "Text processing failed"
+        
+        # Create new text query record
+        query = models.TextQuery(
+            user_id=text_request.user_id,
+            original_text=text_request.text,
+            processed_text=processed_text,
+            success=success
+        )
+        db.add(query)
+        db.commit()
+        db.refresh(query)
+        
+        return {
+            "processed_text": processed_text,
+            "success": success,
+            "message": message,
+            "id": query.id
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error processing text: {str(e)}"
+        )
 
 def process_text_content(text: str) -> tuple[str, bool]:
     try:
@@ -132,21 +226,3 @@ def process_text_content(text: str) -> tuple[str, bool]:
         return processed_text, True
     except Exception:
         return text, False
-
-@app.post("/process-text/")
-async def process_text(text_request: TextRequest):
-    try:
-        processed_text, success = process_text_content(text_request.text)
-        message = "Text processed successfully" if success else "Text processing failed"
-        
-        return {
-            "processed_text": processed_text,
-            "success": success,
-            "message": message,
-            "id": random.randint(1000, 9999)
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error processing text: {str(e)}"
-        )
