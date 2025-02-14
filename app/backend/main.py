@@ -1,9 +1,12 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, Form, File, UploadFile, HTTPException
 from pydantic import BaseModel
+from fastapi import Request
+from fastapi import Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from routers import items, users
+from routers import queries  
 import os
 import random
 import PyPDF2
@@ -11,8 +14,10 @@ from docx import Document
 from io import BytesIO
 from PIL import Image
 import numpy as np
-from fastapi import Request
 import easyocr
+from sqlalchemy.orm import Session
+import models
+import database
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,14 +27,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.include_router(queries.router)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "frontend" / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "frontend" / "templates"))
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'png', 'jpg', 'jpeg'}
 
+# Урлы для frontend
 @app.get("/")
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+# Функции для обработки файлов 
 def is_allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -69,23 +77,33 @@ def extract_text_from_txt(file_content: bytes) -> str:
     return file_content.decode('utf-8')
 
 @app.post("/upload-file/")
-async def upload_file(file: UploadFile = File(...)):
-    if not is_allowed_file(file.filename):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Only {', '.join(ALLOWED_EXTENSIONS)} files are allowed"
-        )
-
-    upload_dir = "uploads"
-    if not os.path.exists(upload_dir):
-        os.makedirs(upload_dir)
-
-    file_content = await file.read()
-    
+async def upload_file(
+    file: UploadFile = File(...),
+    user_id: str = Form(...),
+    db: Session = Depends(database.get_db)
+):
     try:
+        if not is_allowed_file(file.filename):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Only {', '.join(ALLOWED_EXTENSIONS)} files are allowed"
+            )
+
+        upload_dir = "uploads"
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+
+        file_content = await file.read()
         file_extension = file.filename.rsplit('.', 1)[1].lower()
         
-        # Определяем тип отправленного файла 
+        # Update file statistics
+        file_stat = models.FileStatistics(
+            file_type=file_extension,
+            count=1
+        )
+        db.add(file_stat)
+        db.commit()
+
         if file_extension == 'pdf':
             extracted_text = extract_text_from_pdf(file_content)
         elif file_extension == 'docx':
@@ -99,28 +117,92 @@ async def upload_file(file: UploadFile = File(...)):
                 status_code=400,
                 detail="Unsupported file type"
             )
+
+        user = db.query(models.User).filter(models.User.user_id == user_id).first()
+        if not user:
+            user = models.User(user_id=user_id)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        processed_text, success = process_text_content(extracted_text)
+        
+        # Save to database
+        query = models.TextQuery(
+            user_id=user_id,
+            original_text=extracted_text,
+            processed_text=processed_text,
+            success=success
+        )
+        db.add(query)
+        db.commit()
+        db.refresh(query)
+
+        unique_filename = generate_unique_filename(upload_dir)
+        file_location = os.path.join(upload_dir, unique_filename)
+        
+        with open(file_location, "w", encoding='utf-8') as file_object:
+            file_object.write(extracted_text)
+        
+        return {
+            "original_filename": file.filename,
+            "saved_filename": unique_filename,
+            "saved_location": file_location,
+            "processed_text": processed_text,
+            "success": success,
+            "message": "File processed and saved successfully",
+            "query_id": query.id
+        }
     except Exception as e:
         raise HTTPException(
             status_code=400,
             detail=f"Error processing file: {str(e)}"
         )
 
-    # Тут генерируем уникальное имя файла
-    unique_filename = generate_unique_filename(upload_dir)
-    file_location = os.path.join(upload_dir, unique_filename)
-    
-    with open(file_location, "w", encoding='utf-8') as file_object:
-        file_object.write(extracted_text)
-    
-    return {
-        "original_filename": file.filename,
-        "saved_filename": unique_filename,
-        "saved_location": file_location,
-        "message": "File content extracted and saved successfully"
-    }
+# Move this line to the top level of the file, after all imports
+models.Base.metadata.create_all(bind=database.engine)
 
 class TextRequest(BaseModel):
     text: str
+    user_id: str
+
+@app.post("/process-text/")
+async def process_text(
+    text_request: TextRequest,
+    db: Session = Depends(database.get_db)
+):
+    try:
+        user = db.query(models.User).filter(models.User.user_id == text_request.user_id).first()
+        if not user:
+            user = models.User(user_id=text_request.user_id)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        processed_text, success = process_text_content(text_request.text)
+        message = "Text processed successfully" if success else "Text processing failed"
+        
+        query = models.TextQuery(
+            user_id=text_request.user_id,
+            original_text=text_request.text,
+            processed_text=processed_text,
+            success=success
+        )
+        db.add(query)
+        db.commit()
+        db.refresh(query)
+        
+        return {
+            "processed_text": processed_text,
+            "success": success,
+            "message": message,
+            "id": query.id
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error processing text: {str(e)}"
+        )
 
 def process_text_content(text: str) -> tuple[str, bool]:
     try:
@@ -132,21 +214,3 @@ def process_text_content(text: str) -> tuple[str, bool]:
         return processed_text, True
     except Exception:
         return text, False
-
-@app.post("/process-text/")
-async def process_text(text_request: TextRequest):
-    try:
-        processed_text, success = process_text_content(text_request.text)
-        message = "Text processed successfully" if success else "Text processing failed"
-        
-        return {
-            "processed_text": processed_text,
-            "success": success,
-            "message": message,
-            "id": random.randint(1000, 9999)
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error processing text: {str(e)}"
-        )
