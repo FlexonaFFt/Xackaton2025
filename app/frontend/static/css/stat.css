@@ -286,3 +286,5 @@ h1 {
         padding: 0.6rem 1.2rem;
     }
 }
+
+@import 'responsive.css';

@@ -270,7 +270,6 @@ async def get_recent_queries(
 ):
     try:
         queries = db.query(models.TextQuery)\
-            .filter(models.TextQuery.success == True)\
             .order_by(models.TextQuery.created_at.desc())\
             .limit(limit)\
             .all()
@@ -280,7 +279,7 @@ async def get_recent_queries(
                 {
                     "id": query.id,
                     "info": query.processed_text[:50] + "..." if len(query.processed_text) > 50 else query.processed_text,
-                    "is_confidential": False,  
+                    "is_confidential": not query.success, 
                     "query": query.original_text[:100] + "..." if len(query.original_text) > 100 else query.original_text
                 }
                 for query in queries

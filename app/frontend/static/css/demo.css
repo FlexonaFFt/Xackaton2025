@@ -187,3 +187,5 @@ textarea#text-input {
     border-color: #34c277;
     box-shadow: 0 0 0 2px rgba(52, 194, 119, 0.2);
 }
+
+@import 'responsive.css';
