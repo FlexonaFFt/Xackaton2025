@@ -40,6 +40,10 @@ ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'png', 'jpg', 'jpeg'}
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/demo")
+async def demo(request: Request):
+    return templates.TemplateResponse("demo.html", {"request": request})
+
 @app.get("/stat")
 async def statistics(request: Request):
     return templates.TemplateResponse("stat.html", {"request": request})
