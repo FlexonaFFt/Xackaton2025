@@ -128,7 +128,10 @@ async def upload_file(
             db.commit()
             db.refresh(user)
 
-        processed_text, success = process_text_content(extracted_text)
+        # Процесс обработки текста 
+        processed_text, success = preprocess_text(extracted_text)
+        is_confidential = classify_message(processed_text) or not contains_sensitive_patterns(extracted_text)
+        message = {"text": extracted_text, "is_confidential": bool(is_confidential)}
         
         # Save to database
         query = models.TextQuery(
@@ -153,7 +156,8 @@ async def upload_file(
             "saved_location": file_location,
             "processed_text": processed_text,
             "success": success,
-            "message": "File processed and saved successfully",
+            "message": message,
+            "is_confidential": is_confidential,
             "query_id": query.id
         }
     except Exception as e:
