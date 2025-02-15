@@ -4,20 +4,53 @@ from fastapi import Request
 from fastapi import Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from pathlib import Path
 from routers import items, users
 from routers import queries  
 import os
 import random
 import PyPDF2
+=======
+=======
+>>>>>>> Stashed changes
+from sqlalchemy.orm import Session
+from pathlib import Path
+from routers import items, users
+from routers import queries  
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 from docx import Document
 from io import BytesIO
 from PIL import Image
 import numpy as np
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import easyocr
 from sqlalchemy.orm import Session
 import models
 import database
+=======
+=======
+>>>>>>> Stashed changes
+import models, database
+import os, random, easyocr, PyPDF2
+import re
+from langdetect import detect
+from deep_translator import GoogleTranslator
+from transformers import BertTokenizer, BertForSequenceClassification, pipeline, AutoModelForTokenClassification, AutoTokenizer
+from sklearn.metrics import accuracy_score
+from fastapi import FastAPI, HTTPException
+
+app = FastAPI()
+
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -178,9 +211,21 @@ async def process_text(
             db.add(user)
             db.commit()
             db.refresh(user)
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
         processed_text, success = process_text_content(text_request.text)
         message = "Text processed successfully" if success else "Text processing failed"
+=======
+        processed_text, success = preprocess_text(text_request.text)
+        is_confidential = classify_message(processed_text) or not contains_sensitive_patterns(text_request.text)
+        message = {"text": text_request.text, "is_confidential": bool(is_confidential)}
+>>>>>>> Stashed changes
+=======
+        processed_text, success = preprocess_text(text_request.text)
+        is_confidential = classify_message(processed_text) or not contains_sensitive_patterns(text_request.text)
+        message = {"text": text_request.text, "is_confidential": bool(is_confidential)}
+>>>>>>> Stashed changes
         
         query = models.TextQuery(
             user_id=text_request.user_id,
@@ -204,6 +249,8 @@ async def process_text(
             detail=f"Error processing text: {str(e)}"
         )
 
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 def process_text_content(text: str) -> tuple[str, bool]:
     try:
         punctuation_marks = set('.,!?;:()[]{}«»""\'\"—–-')
@@ -214,3 +261,50 @@ def process_text_content(text: str) -> tuple[str, bool]:
         return processed_text, True
     except Exception:
         return text, False
+=======
+=======
+>>>>>>> Stashed changes
+# Функция для приведения текста к единому языку (русский)
+def translate_to_russian(text):
+    try:
+        detected_lang = detect(text)
+        if detected_lang != 'ru':
+            return GoogleTranslator(source=detected_lang, target='ru').translate(text)
+    except:
+        pass
+    return text
+
+# Функция для нормализации текста
+def preprocess_text(text):
+    try:
+        text = text.lower()  # Приведение к нижнему регистру
+        text = re.sub(r'[^а-яА-ЯA-Za-z0-9\s]', '', text)  # Удаление спецсимволов
+        text = translate_to_russian(text) # Перевод в русский
+        print(text + '////')
+        return text, True
+    except Exception:
+        return text, False
+
+# Загрузка модели mBERT для классификации
+tokenizer = BertTokenizer.from_pretrained("bert-base-multilingual-cased")
+model = BertForSequenceClassification.from_pretrained("bert-base-multilingual-cased", num_labels=2)
+classifier = pipeline("text-classification", model=model, tokenizer=tokenizer)
+
+# Функция для классификации
+def classify_message(text):
+    result = classifier(text)
+    return int(result[0]['label'].split('_')[-1])
+
+
+# Функция для поиска специфичных шаблонов (email, телефон, URL)
+def contains_sensitive_patterns(text):
+    email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+    phone_pattern = r"\+?\d[\d -]{8,}\d"  # Простая проверка номеров
+    
+    if re.search(email_pattern, text) or re.search(phone_pattern, text):
+        return True
+    return False
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes

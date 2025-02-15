@@ -1,1 +1,9 @@
-env
+# ignore ALL .log files
+*.log
+*.gitignore
+
+# ignore ALL files in ANY directory named temp
+temp
+venv
+dataset
+__pycache__
