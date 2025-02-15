@@ -1,0 +1,60 @@
+
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Statistics</title>
+    <link rel="stylesheet" href="../static/css/style1.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div></div>
+    <div class="body">
+        <div class="big_text_block">
+            <div>
+                <header>
+                    <div class="buttons">
+                        <div class="button"><a href="">Главная</a></div>
+                        <div class="button" id="button1"><a href="/templates/stat.html">Статистика</a></div>
+                    </div>
+                </header>
+                <div id="absolute_position_text_block">
+                    <h1>Статистика и мониторинг</h1>
+                    <div class="buttons">
+                        <p class="text">Oценка статистики запросов, а также текст прошедших и отклоненных запросов.</p>
+                    </div>
+                </div>
+        
+            </div>
+        </div>
+    
+            <div class = "canv"><canvas id="acquisitions3"></canvas></div>
+            <script type="module" src="../static/js/acquisitions3.js"></script>
+    
+            
+    
+            <div class = "canv">
+                <canvas id="acquisitions2"></canvas>
+            </div>
+            <script type="module" src="../static/js/acquisitions2.js"></script>
+            
+            <div class="text">
+                <p>Последние запросы</p>
+            </div>
+    
+    
+            <div class="users">
+                <p>id</p>
+                <p>info</p>
+                <p>status</p>
+                <p>query</p>
+            </div>
+            
+    
+        </div>
+    </div>
+    <div></div>
+    
+    
+  </body>
+</html>
