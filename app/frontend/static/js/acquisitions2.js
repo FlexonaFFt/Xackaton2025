@@ -1,5 +1,10 @@
 import Chart from 'chart.js/auto'
 import { fontString } from 'chart.js/helpers';
+
+
+
+import Chart from 'chart.js/auto'
+import { fontString } from 'chart.js/helpers';
 document.addEventListener('DOMContentLoaded', () => {
     const ctx = document.getElementById('acquisitions2');
     if (!ctx) {
