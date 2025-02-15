@@ -263,6 +263,34 @@ async def get_time_period_statistics(
             detail=f"Error retrieving time period statistics: {str(e)}"
         )
 
+@router.get("/recent_queries")
+async def get_recent_queries(
+    limit: int = 5,
+    db: Session = Depends(database.get_db)
+):
+    try:
+        queries = db.query(models.TextQuery)\
+            .order_by(models.TextQuery.created_at.desc())\
+            .limit(limit)\
+            .all()
+        
+        return {
+            "queries": [
+                {
+                    "id": query.id,
+                    "info": query.processed_text[:50] + "..." if len(query.processed_text) > 50 else query.processed_text,
+                    "is_confidential": not query.success, 
+                    "query": query.original_text[:100] + "..." if len(query.original_text) > 100 else query.original_text
+                }
+                for query in queries
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving recent queries: {str(e)}"
+        )
+
 @router.get("/statistics/user/{user_id}")
 async def get_user_statistics(
     user_id: str,

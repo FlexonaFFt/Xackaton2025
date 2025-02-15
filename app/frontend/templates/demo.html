@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Demo Page</title>
+    <link rel="stylesheet" href="../static/css/demo.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <div class="body">
+        <div class="big_text_block">
+            <div id="absolute_position_text_block">
+                <h1>Демонстрация работы</h1>
+                <p class="text">Введите текст или загрузите файл для проверки</p>
+                <div class="buttons">
+                    <div class="button"><a href="/">Главная</a></div>
+                    <div class="button"><a href="/stat">Статистика</a></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-container">
+            <div class="user-input">
+                <input type="text" 
+                       id="user-id" 
+                       placeholder="Введите 7-значный ID пользователя" 
+                       class="user-id-input" 
+                       maxlength="7" 
+                       pattern="[0-9]{7}" 
+                       required>
+            </div>
+            
+            <div class="input-section">
+                <div class="text-input">
+                    <textarea id="text-input" placeholder="Введите текст для проверки..."></textarea>
+                    <button id="check-text" class="submit-btn">Проверить текст</button>
+                </div>
+                
+                <div class="file-input">
+                    <div class="file-drop-zone" id="drop-zone">
+                        <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.txt,.pdf,.docx" hidden>
+                        <div class="drop-zone-text">
+                            <span>Перетащите файл сюда или</span>
+                            <button id="select-file" class="select-btn">Выберите файл</button>
+                        </div>
+                        <div class="file-types">Поддерживаемые форматы: PNG, JPG, JPEG, TXT, PDF, DOCX</div>
+                    </div>
+                    <button id="check-file" class="submit-btn" disabled>Проверить файл</button>
+                    <div class="processing-note">* Процесс обработки файла может занять некоторое время</div>
+                </div>
+            </div>
+
+            <div class="result-section" style="display: none;">
+                <h2>Результат проверки</h2>
+                <div class="result-content">
+                    <div class="status-indicator"></div>
+                    <div class="result-details">
+                        <div class="result-status"></div>
+                        <div class="result-text"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="../static/js/demo.js"></script>
+  </body>
+</html>

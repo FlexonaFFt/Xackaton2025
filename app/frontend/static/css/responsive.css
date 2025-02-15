@@ -1,0 +1,124 @@
+/* Общие адаптивные стили */
+@media screen and (max-width: 768px) {
+    .body {
+        padding: 1rem;
+    }
+
+    .big_text_block {
+        padding: 2rem 1rem;
+    }
+
+    #absolute_position_text_block h1 {
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+    }
+
+    .text {
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .buttons {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .button {
+        width: 100%;
+    }
+
+    .demo-container {
+        padding: 1rem;
+    }
+
+    .input-section {
+        gap: 1.5rem;
+    }
+
+    .text-input, .file-input {
+        padding: 1rem;
+    }
+
+    textarea#text-input {
+        min-height: 120px;
+    }
+
+    .file-drop-zone {
+        padding: 1rem;
+    }
+
+    .result-section {
+        padding: 1rem;
+    }
+
+    .result-text {
+        max-width: 95%;
+    }
+
+    .user-id-input {
+        max-width: 100%;
+    }
+}
+
+/* Дополнительные стили для очень маленьких экранов */
+@media screen and (max-width: 480px) {
+    #absolute_position_text_block h1 {
+        font-size: 1.5rem;
+    }
+
+    .file-types {
+        font-size: 0.8rem;
+    }
+
+    .submit-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .result-status {
+        font-size: 1rem;
+    }
+
+    .result-text {
+        font-size: 0.9rem;
+    }
+}
+
+/* Стили для статистики */
+@media screen and (max-width: 768px) {
+    .stat-container {
+        padding: 1rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .chart-container {
+        height: 300px;
+    }
+
+    .requests-table {
+        font-size: 0.9rem;
+    }
+
+    .table-cell {
+        padding: 0.5rem;
+    }
+}
+
+/* Ландшафтная ориентация на мобильных */
+@media screen and (max-height: 480px) and (orientation: landscape) {
+    .big_text_block {
+        min-height: auto;
+        padding: 1rem;
+    }
+
+    .demo-container {
+        margin: 1rem auto;
+    }
+
+    .input-section {
+        gap: 1rem;
+    }
+}

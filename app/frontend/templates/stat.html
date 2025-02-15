@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Statistics</title>
+    <link rel="stylesheet" href="../static/css/stat.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <div class="body">
+        <div class="big_text_block">
+            <div id="absolute_position_text_block">
+                <h1>Статистика и мониторинг</h1>
+                <p class="text">Oценка статистики запросов, а также текст прошедших и отклоненных запросов</p>
+                <div class="buttons">
+                    <div class="button"><a href="/">Главная</a></div>
+                    <div class="button" id="button1"><a href="/stat">Статистика</a></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="chart-section">
+                <div class="chart-card">
+                    <h3>Статистика запросов</h3>
+                    <canvas id="acquisitions3"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Распределение по типам</h3>
+                    <canvas id="acquisitions2"></canvas>
+                </div>
+            </div>
+
+            <div class="requests-section">
+                <h2>Последние запросы</h2>
+                <div class="requests-table">
+                    <div class="table-header">
+                        <div class="table-cell">ID</div>
+                        <div class="table-cell">Информация</div>
+                        <div class="table-cell">Статус</div>
+                        <div class="table-cell">Запрос</div>
+                    </div>
+                    <!-- Table content will be added dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../static/js/api.js"></script>
+    <script src="../static/js/chart1.js"></script>
+    <script src="../static/js/chart2.js"></script>
+  </body>
+</html>
