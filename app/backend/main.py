@@ -7,18 +7,21 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from routers import items, users
 from routers import queries  
-import os
-import random
-import PyPDF2
+from sqlalchemy.orm import Session
 from docx import Document
 from io import BytesIO
 from PIL import Image
 import numpy as np
-import easyocr
-from sqlalchemy.orm import Session
-import models
-import database
+import models, database
+import os, random, easyocr, PyPDF2
+import re
+from langdetect import detect
+from deep_translator import GoogleTranslator
+from transformers import BertTokenizer, BertForSequenceClassification, pipeline, AutoModelForTokenClassification, AutoTokenizer
+from sklearn.metrics import accuracy_score
+from fastapi import FastAPI, HTTPException
 
+app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 app = FastAPI(
@@ -65,13 +68,59 @@ def extract_text_from_docx(file_content: bytes) -> str:
         text += paragraph.text + "\n"
     return text
 
+def translate_to_english(text):
+    try:
+        detected_lang = detect(text)
+        if detected_lang != 'en':
+            return GoogleTranslator(source=detected_lang, target='en').translate(text)
+    except:
+        pass
+    return text
+
+# Функция для классификации
+def classify_message(text):
+    try:
+        # Translate to English for classification
+        english_text = translate_to_english(text)
+        
+        # Split text into smaller chunks that fit within BERT's limit
+        max_length = 500
+        words = english_text.split()
+        chunks = []
+        current_chunk = []
+        current_length = 0
+        
+        for word in words:
+            if current_length + len(word) < max_length:
+                current_chunk.append(word)
+                current_length += len(word)
+            else:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = [word]
+                current_length = len(word)
+        
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        # If any chunk is classified as confidential, the whole text is confidential
+        for chunk in chunks:
+            if chunk.strip():
+                result = classifier(chunk)
+                if int(result[0]['label'].split('_')[-1]):
+                    return 1
+        return 0
+    except Exception as e:
+        print(f"Classification error: {str(e)}")
+        return 0
+
 def extract_text_from_image(file_content: bytes) -> str:
     reader = easyocr.Reader(['ru', 'en'], gpu=False)
     image = Image.open(BytesIO(file_content))
     image_np = np.array(image)
     results = reader.readtext(image_np)
     text = '\n'.join([result[1] for result in results if result[1].strip()])
-    return text
+    # Ensure text is in Russian for consistency
+    return translate_to_russian(text)
 
 def extract_text_from_txt(file_content: bytes) -> str:
     return file_content.decode('utf-8')
@@ -125,19 +174,24 @@ async def upload_file(
             db.commit()
             db.refresh(user)
 
-        processed_text, success = process_text_content(extracted_text)
-        unique_filename = generate_unique_filename(upload_dir)
-        file_location = os.path.join(upload_dir, unique_filename)
+        # Процесс обработки текста 
+        processed_text, success = preprocess_text(extracted_text)
+        is_confidential = classify_message(processed_text) or not contains_sensitive_patterns(extracted_text)
+        message = {"text": extracted_text, "is_confidential": bool(is_confidential)}
+        
+        # Save to database
         query = models.TextQuery(
             user_id=user_id,
             original_text=extracted_text,
             processed_text=processed_text,
-            success=success,
-            file_id=unique_filename 
+            success=success
         )
         db.add(query)
         db.commit()
         db.refresh(query)
+
+        unique_filename = generate_unique_filename(upload_dir)
+        file_location = os.path.join(upload_dir, unique_filename)
         
         with open(file_location, "w", encoding='utf-8') as file_object:
             file_object.write(extracted_text)
@@ -148,7 +202,8 @@ async def upload_file(
             "saved_location": file_location,
             "processed_text": processed_text,
             "success": success,
-            "message": "File processed and saved successfully",
+            "message": message,
+            "is_confidential": is_confidential,
             "query_id": query.id
         }
     except Exception as e:
@@ -177,9 +232,10 @@ async def process_text(
             db.commit()
             db.refresh(user)
 
-        processed_text, success = process_text_content(text_request.text)
-        message = "Text processed successfully" if success else "Text processing failed"
-        
+        processed_text, success = preprocess_text(text_request.text)
+        is_confidential = classify_message(processed_text) or not contains_sensitive_patterns(text_request.text)
+        message = {"text": text_request.text, "is_confidential": bool(is_confidential)}
+
         query = models.TextQuery(
             user_id=text_request.user_id,
             original_text=text_request.text,
@@ -212,3 +268,83 @@ def process_text_content(text: str) -> tuple[str, bool]:
         return processed_text, True
     except Exception:
         return text, False
+
+# Функция для приведения текста к единому языку (русский)
+def translate_to_russian(text):
+    try:
+        detected_lang = detect(text)
+        if detected_lang != 'ru':
+            return GoogleTranslator(source=detected_lang, target='ru').translate(text)
+    except:
+        pass
+    return text
+
+# Функция для нормализации текста
+def preprocess_text(text):
+    try:
+        # Process text in chunks if it's very long
+        max_chunk = 1000000  # 1MB of text at a time
+        if len(text) > max_chunk:
+            chunks = [text[i:i + max_chunk] for i in range(0, len(text), max_chunk)]
+            processed_chunks = []
+            for chunk in chunks:
+                chunk = chunk.lower()
+                chunk = re.sub(r'[^а-яА-ЯA-Za-z0-9\s]', '', chunk)
+                chunk = translate_to_russian(chunk)
+                processed_chunks.append(chunk)
+            return ''.join(processed_chunks), True
+        else:
+            text = text.lower()
+            text = re.sub(r'[^а-яА-ЯA-Za-z0-9\s]', '', text)
+            text = translate_to_russian(text)
+            return text, True
+    except Exception:
+        return text, False
+
+# Загрузка модели mBERT для классификации
+tokenizer = BertTokenizer.from_pretrained("bert-base-multilingual-cased")
+model = BertForSequenceClassification.from_pretrained("bert-base-multilingual-cased", num_labels=2)
+classifier = pipeline("text-classification", model=model, tokenizer=tokenizer)
+
+# Функция для классификации
+def classify_message(text):
+    try:
+        # Split text into smaller chunks that fit within BERT's limit
+        max_length = 500  # Using 500 to stay safely under the 512 token limit
+        words = text.split()
+        chunks = []
+        current_chunk = []
+        current_length = 0
+        
+        for word in words:
+            if current_length + len(word) < max_length:
+                current_chunk.append(word)
+                current_length += len(word)
+            else:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = [word]
+                current_length = len(word)
+        
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        # If any chunk is classified as confidential, the whole text is confidential
+        for chunk in chunks:
+            if chunk.strip():  # Only process non-empty chunks
+                result = classifier(chunk)
+                if int(result[0]['label'].split('_')[-1]):
+                    return 1
+        return 0
+    except Exception as e:
+        print(f"Classification error: {str(e)}")
+        return 0  # Default to non-confidential in case of error
+
+
+# Функция для поиска специфичных шаблонов (email, телефон, URL)
+def contains_sensitive_patterns(text):
+    email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+    phone_pattern = r"\+?\d[\d -]{8,}\d"  # Простая проверка номеров
+    
+    if re.search(email_pattern, text) or re.search(phone_pattern, text):
+        return True
+    return False
