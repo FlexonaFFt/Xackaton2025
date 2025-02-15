@@ -21,6 +21,8 @@
     padding: 2rem;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 textarea#text-input {
@@ -34,6 +36,7 @@ textarea#text-input {
     font-size: 1rem;
     margin-bottom: 1rem;
     resize: vertical;
+    box-sizing: border-box;
 }
 
 .file-drop-zone {
@@ -54,6 +57,14 @@ textarea#text-input {
     color: #9ca3af;
     font-size: 0.9rem;
     margin-top: 1rem;
+}
+
+.processing-note {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    text-align: center;
+    font-style: italic;
 }
 
 .submit-btn {
@@ -94,11 +105,13 @@ textarea#text-input {
     border-radius: 16px;
     padding: 2rem;
     margin-top: 2rem;
+    text-align: center;
 }
 
 .result-content {
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
     gap: 1rem;
     margin-top: 1rem;
 }
@@ -107,7 +120,6 @@ textarea#text-input {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    flex-shrink: 0;
 }
 
 .status-indicator.success {
@@ -121,7 +133,9 @@ textarea#text-input {
 .result-details {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 0.5rem;
+    width: 100%;
 }
 
 .result-status {
@@ -138,8 +152,10 @@ textarea#text-input {
 }
 
 .result-text {
-    color: #9ca3af;
+    color: inherit;
     margin-top: 0.5rem;
+    max-width: 80%;
+    text-align: center;
 }
 
 @media (max-width: 768px) {
