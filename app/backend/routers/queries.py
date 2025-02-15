@@ -37,6 +37,7 @@ async def get_user_queries(
                     "original_text": query.original_text,
                     "processed_text": query.processed_text,
                     "success": query.success,
+                    "file_id": query.file_id,  
                     "created_at": query.created_at
                 }
                 for query in queries
@@ -46,6 +47,53 @@ async def get_user_queries(
         raise HTTPException(
             status_code=400,
             detail=f"Error retrieving queries: {str(e)}"
+        )
+
+@router.get("/statistics/user/{user_id}")
+async def get_user_statistics(
+    user_id: str,
+    db: Session = Depends(database.get_db)
+):
+    try:
+        user = db.query(models.User).filter(models.User.user_id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        queries = db.query(models.TextQuery).filter(
+            models.TextQuery.user_id == user_id
+        ).all()
+
+        success_count = len([q for q in queries if q.success])
+        fail_count = len([q for q in queries if not q.success])
+        file_count = len([q for q in queries if q.file_id is not None])  
+        total_fails = fail_count
+        if total_fails <= 1:
+            new_rating = 5
+        elif total_fails <= 3:
+            new_rating = 4
+        elif total_fails <= 4:
+            new_rating = 3
+        elif total_fails <= 5:
+            new_rating = 2
+        else:
+            new_rating = 1
+
+        if user.rating != new_rating:
+            user.rating = new_rating
+            db.commit()
+
+        return {
+            "user_id": user_id,
+            "success_count": success_count,
+            "fail_count": fail_count,
+            "file_count": file_count, 
+            "total_count": len(queries),
+            "current_rating": new_rating
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving user statistics: {str(e)}"
         )
 
 @router.get("/random_users")

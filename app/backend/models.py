@@ -19,6 +19,7 @@ class TextQuery(Base):
     original_text = Column(Text)
     processed_text = Column(Text)
     success = Column(Boolean)
+    file_id = Column(String, nullable=True) 
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(String(7), ForeignKey("users.user_id"))
     user = relationship("User", back_populates="queries")

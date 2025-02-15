@@ -126,20 +126,18 @@ async def upload_file(
             db.refresh(user)
 
         processed_text, success = process_text_content(extracted_text)
-        
-        # Save to database
+        unique_filename = generate_unique_filename(upload_dir)
+        file_location = os.path.join(upload_dir, unique_filename)
         query = models.TextQuery(
             user_id=user_id,
             original_text=extracted_text,
             processed_text=processed_text,
-            success=success
+            success=success,
+            file_id=unique_filename 
         )
         db.add(query)
         db.commit()
         db.refresh(query)
-
-        unique_filename = generate_unique_filename(upload_dir)
-        file_location = os.path.join(upload_dir, unique_filename)
         
         with open(file_location, "w", encoding='utf-8') as file_object:
             file_object.write(extracted_text)
