@@ -37,6 +37,10 @@ body {
     align-items: center;
     gap: 1rem;
     margin-bottom: 3rem;
+    text-align: center;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 h1 {
@@ -45,6 +49,8 @@ h1 {
     color: #34c277;
     margin-bottom: 0.2rem;
     animation: fadeUp 0.8s ease-out;
+    text-align: center;
+    line-height: 1.2;
 }
 
 .text {
@@ -55,6 +61,20 @@ h1 {
     margin: 0 auto;
     font-weight: 400;
     animation: fadeUp 0.8s ease-out 0.2s backwards;
+    text-align: center;
+    padding: 0 1rem;
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2.5rem;
+        padding: 0 1rem;
+    }
+    
+    .text {
+        font-size: 1.1rem;
+        padding: 0 1.5rem;
+    }
 }
 
 .buttons {
@@ -141,6 +161,63 @@ h1 {
     padding: 2rem;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 2rem;
+}
+
+.requests-table {
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.table-header, .table-row {
+    display: grid;
+    grid-template-columns: 0.5fr 1.5fr 1fr 2fr;
+    gap: 1rem;
+    padding: 1.2rem;
+    align-items: center;
+}
+
+.table-header {
+    background: rgba(45, 157, 92, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+}
+
+.table-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.3s ease;
+}
+
+.table-row:hover {
+    background: rgba(45, 157, 92, 0.05);
+}
+
+.table-cell {
+    color: #ffffff;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.table-cell.query-text {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.4;
+}
+
+.status-success {
+    color: #34c277;
+    font-weight: 500;
+}
+
+.status-failed {
+    color: #ff6b6b;
+    font-weight: 500;
 }
 
 .requests-section h2 {
