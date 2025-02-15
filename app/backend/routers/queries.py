@@ -344,14 +344,12 @@ async def get_file_statistics(
         
         stats = query.all()
         
-        # Группируем статистику по типам файлов
         file_stats = {}
         for stat in stats:
             if stat.file_type not in file_stats:
                 file_stats[stat.file_type] = 0
             file_stats[stat.file_type] += stat.count
             
-        # Сортируем по количеству использований
         sorted_stats = sorted(
             file_stats.items(), 
             key=lambda x: x[1], 
