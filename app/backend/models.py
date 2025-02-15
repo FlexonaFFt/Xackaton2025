@@ -31,3 +31,12 @@ class FileStatistics(Base):
     file_type = Column(String, index=True)
     count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.user_id"))
+    message = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False)

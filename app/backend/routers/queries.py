@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import and_  
 from typing import List
 from pydantic import BaseModel  
 import database
@@ -65,7 +66,6 @@ async def get_user_statistics(
 
         success_count = len([q for q in queries if q.success])
         fail_count = len([q for q in queries if not q.success])
-        file_count = len([q for q in queries if q.file_id is not None])  
         total_fails = fail_count
         if total_fails <= 1:
             new_rating = 5
@@ -79,14 +79,29 @@ async def get_user_statistics(
             new_rating = 1
 
         if user.rating != new_rating:
+            old_rating = user.rating
             user.rating = new_rating
+            
+            if new_rating < 3 and (old_rating >= 3 or old_rating is None):
+                notification = models.Notification(
+                    user_id=user_id,
+                    message="Внимание! Ваш рейтинг упал ниже 3. Постарайтесь улучшить качество запросов."
+                )
+                db.add(notification)
+            
+            if new_rating < 2 and (old_rating >= 2 or old_rating is None):
+                notification = models.Notification(
+                    user_id=user_id,
+                    message="Критическое предупреждение! Ваш рейтинг упал ниже 2. Необходимо срочно улучшить качество запросов."
+                )
+                db.add(notification)
+            
             db.commit()
 
         return {
             "user_id": user_id,
             "success_count": success_count,
             "fail_count": fail_count,
-            "file_count": file_count, 
             "total_count": len(queries),
             "current_rating": new_rating
         }
@@ -94,6 +109,58 @@ async def get_user_statistics(
         raise HTTPException(
             status_code=400,
             detail=f"Error retrieving user statistics: {str(e)}"
+        )
+
+@router.get("/notifications/{user_id}")
+async def get_user_notifications(
+    user_id: str,
+    db: Session = Depends(database.get_db)
+):
+    try:
+        notifications = db.query(models.Notification).filter(
+            and_(
+                models.Notification.user_id == user_id,
+                models.Notification.is_read == False
+            )
+        ).all()
+        
+        return {
+            "notifications": [
+                {
+                    "id": notif.id,
+                    "message": notif.message,
+                    "created_at": notif.created_at
+                }
+                for notif in notifications
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving notifications: {str(e)}"
+        )
+
+@router.post("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: int,
+    db: Session = Depends(database.get_db)
+):
+    try:
+        notification = db.query(models.Notification).filter(
+            models.Notification.id == notification_id
+        ).first()
+        
+        if not notification:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        
+        notification.is_read = True
+        db.commit()
+        
+        return {"message": "Notification marked as read"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error marking notification as read: {str(e)}"
         )
 
 @router.get("/random_users")
@@ -211,7 +278,7 @@ async def get_user_statistics(
         ).all()
 
         success_count = len([q for q in queries if q.success])
-        fail_count = len([q for q in queries if not q.success]) 
+        fail_count = len([q for q in queries if not q.success])
         total_fails = fail_count
         if total_fails <= 1:
             new_rating = 5
@@ -277,14 +344,12 @@ async def get_file_statistics(
         
         stats = query.all()
         
-        # Группируем статистику по типам файлов
         file_stats = {}
         for stat in stats:
             if stat.file_type not in file_stats:
                 file_stats[stat.file_type] = 0
             file_stats[stat.file_type] += stat.count
             
-        # Сортируем по количеству использований
         sorted_stats = sorted(
             file_stats.items(), 
             key=lambda x: x[1], 
