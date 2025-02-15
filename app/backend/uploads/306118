@@ -1,4 +1,0 @@
-1. curl -fsSL https://raw.githubusercontent.com/xvzc/SpoofDPI/main/install.sh | bash -s darwin-amd64
-2. export PATH=$PATH:~/.spoof-dpi/bin
-3. spoof-dpi
-4. spoof-dpi --enable-doh --window-size 0
