@@ -236,11 +236,22 @@ def translate_to_russian(text):
 # Функция для нормализации текста
 def preprocess_text(text):
     try:
-        text = text.lower()  # Приведение к нижнему регистру
-        text = re.sub(r'[^а-яА-ЯA-Za-z0-9\s]', '', text)  # Удаление спецсимволов
-        text = translate_to_russian(text) # Перевод в русский
-        print(text + '////')
-        return text, True
+        # Process text in chunks if it's very long
+        max_chunk = 1000000  # 1MB of text at a time
+        if len(text) > max_chunk:
+            chunks = [text[i:i + max_chunk] for i in range(0, len(text), max_chunk)]
+            processed_chunks = []
+            for chunk in chunks:
+                chunk = chunk.lower()
+                chunk = re.sub(r'[^а-яА-ЯA-Za-z0-9\s]', '', chunk)
+                chunk = translate_to_russian(chunk)
+                processed_chunks.append(chunk)
+            return ''.join(processed_chunks), True
+        else:
+            text = text.lower()
+            text = re.sub(r'[^а-яА-ЯA-Za-z0-9\s]', '', text)
+            text = translate_to_russian(text)
+            return text, True
     except Exception:
         return text, False
 
@@ -251,8 +262,36 @@ classifier = pipeline("text-classification", model=model, tokenizer=tokenizer)
 
 # Функция для классификации
 def classify_message(text):
-    result = classifier(text)
-    return int(result[0]['label'].split('_')[-1])
+    try:
+        # Split text into smaller chunks that fit within BERT's limit
+        max_length = 500  # Using 500 to stay safely under the 512 token limit
+        words = text.split()
+        chunks = []
+        current_chunk = []
+        current_length = 0
+        
+        for word in words:
+            if current_length + len(word) < max_length:
+                current_chunk.append(word)
+                current_length += len(word)
+            else:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = [word]
+                current_length = len(word)
+        
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        # If any chunk is classified as confidential, the whole text is confidential
+        for chunk in chunks:
+            if chunk.strip():  # Only process non-empty chunks
+                result = classifier(chunk)
+                if int(result[0]['label'].split('_')[-1]):
+                    return 1
+        return 0
+    except Exception as e:
+        print(f"Classification error: {str(e)}")
+        return 0  # Default to non-confidential in case of error
 
 
 # Функция для поиска специфичных шаблонов (email, телефон, URL)
