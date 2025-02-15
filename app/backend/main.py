@@ -7,18 +7,21 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from routers import items, users
 from routers import queries  
-import os
-import random
-import PyPDF2
+from sqlalchemy.orm import Session
 from docx import Document
 from io import BytesIO
 from PIL import Image
 import numpy as np
-import easyocr
-from sqlalchemy.orm import Session
-import models
-import database
+import models, database
+import os, random, easyocr, PyPDF2
+import re
+from langdetect import detect
+from deep_translator import GoogleTranslator
+from transformers import BertTokenizer, BertForSequenceClassification, pipeline, AutoModelForTokenClassification, AutoTokenizer
+from sklearn.metrics import accuracy_score
+from fastapi import FastAPI, HTTPException
 
+app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 app = FastAPI(
@@ -126,18 +129,20 @@ async def upload_file(
             db.refresh(user)
 
         processed_text, success = process_text_content(extracted_text)
-        unique_filename = generate_unique_filename(upload_dir)
-        file_location = os.path.join(upload_dir, unique_filename)
+        
+        # Save to database
         query = models.TextQuery(
             user_id=user_id,
             original_text=extracted_text,
             processed_text=processed_text,
-            success=success,
-            file_id=unique_filename 
+            success=success
         )
         db.add(query)
         db.commit()
         db.refresh(query)
+
+        unique_filename = generate_unique_filename(upload_dir)
+        file_location = os.path.join(upload_dir, unique_filename)
         
         with open(file_location, "w", encoding='utf-8') as file_object:
             file_object.write(extracted_text)
@@ -177,9 +182,10 @@ async def process_text(
             db.commit()
             db.refresh(user)
 
-        processed_text, success = process_text_content(text_request.text)
-        message = "Text processed successfully" if success else "Text processing failed"
-        
+        processed_text, success = preprocess_text(text_request.text)
+        is_confidential = classify_message(processed_text) or not contains_sensitive_patterns(text_request.text)
+        message = {"text": text_request.text, "is_confidential": bool(is_confidential)}
+
         query = models.TextQuery(
             user_id=text_request.user_id,
             original_text=text_request.text,
@@ -212,3 +218,44 @@ def process_text_content(text: str) -> tuple[str, bool]:
         return processed_text, True
     except Exception:
         return text, False
+
+# Функция для приведения текста к единому языку (русский)
+def translate_to_russian(text):
+    try:
+        detected_lang = detect(text)
+        if detected_lang != 'ru':
+            return GoogleTranslator(source=detected_lang, target='ru').translate(text)
+    except:
+        pass
+    return text
+
+# Функция для нормализации текста
+def preprocess_text(text):
+    try:
+        text = text.lower()  # Приведение к нижнему регистру
+        text = re.sub(r'[^а-яА-ЯA-Za-z0-9\s]', '', text)  # Удаление спецсимволов
+        text = translate_to_russian(text) # Перевод в русский
+        print(text + '////')
+        return text, True
+    except Exception:
+        return text, False
+
+# Загрузка модели mBERT для классификации
+tokenizer = BertTokenizer.from_pretrained("bert-base-multilingual-cased")
+model = BertForSequenceClassification.from_pretrained("bert-base-multilingual-cased", num_labels=2)
+classifier = pipeline("text-classification", model=model, tokenizer=tokenizer)
+
+# Функция для классификации
+def classify_message(text):
+    result = classifier(text)
+    return int(result[0]['label'].split('_')[-1])
+
+
+# Функция для поиска специфичных шаблонов (email, телефон, URL)
+def contains_sensitive_patterns(text):
+    email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+    phone_pattern = r"\+?\d[\d -]{8,}\d"  # Простая проверка номеров
+    
+    if re.search(email_pattern, text) or re.search(phone_pattern, text):
+        return True
+    return False
