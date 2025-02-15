@@ -70,11 +70,11 @@ def extract_text_from_docx(file_content: bytes) -> str:
 
 def translate_to_english(text):
     try:
-        detected_lang = detect(text)
-        if detected_lang != 'en':
-            return GoogleTranslator(source=detected_lang, target='en').translate(text)
+         detected_lang = detect(text)
+         if detected_lang != 'en':
+             return GoogleTranslator(source=detected_lang, target='en').translate(text)
     except:
-        pass
+         pass
     return text
 
 # Функция для классификации
