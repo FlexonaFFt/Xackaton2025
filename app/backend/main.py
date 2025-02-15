@@ -4,38 +4,24 @@ from fastapi import Request
 from fastapi import Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 from pathlib import Path
 from routers import items, users
 from routers import queries  
 import os
 import random
 import PyPDF2
-=======
-=======
->>>>>>> Stashed changes
 from sqlalchemy.orm import Session
 from pathlib import Path
 from routers import items, users
 from routers import queries  
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 from docx import Document
 from io import BytesIO
 from PIL import Image
 import numpy as np
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 import easyocr
 from sqlalchemy.orm import Session
 import models
 import database
-=======
-=======
->>>>>>> Stashed changes
 import models, database
 import os, random, easyocr, PyPDF2
 import re
@@ -47,10 +33,6 @@ from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -211,22 +193,11 @@ async def process_text(
             db.add(user)
             db.commit()
             db.refresh(user)
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 
-        processed_text, success = process_text_content(text_request.text)
-        message = "Text processed successfully" if success else "Text processing failed"
-=======
         processed_text, success = preprocess_text(text_request.text)
         is_confidential = classify_message(processed_text) or not contains_sensitive_patterns(text_request.text)
         message = {"text": text_request.text, "is_confidential": bool(is_confidential)}
->>>>>>> Stashed changes
-=======
-        processed_text, success = preprocess_text(text_request.text)
-        is_confidential = classify_message(processed_text) or not contains_sensitive_patterns(text_request.text)
-        message = {"text": text_request.text, "is_confidential": bool(is_confidential)}
->>>>>>> Stashed changes
-        
+
         query = models.TextQuery(
             user_id=text_request.user_id,
             original_text=text_request.text,
@@ -249,8 +220,6 @@ async def process_text(
             detail=f"Error processing text: {str(e)}"
         )
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 def process_text_content(text: str) -> tuple[str, bool]:
     try:
         punctuation_marks = set('.,!?;:()[]{}«»""\'\"—–-')
@@ -261,9 +230,7 @@ def process_text_content(text: str) -> tuple[str, bool]:
         return processed_text, True
     except Exception:
         return text, False
-=======
-=======
->>>>>>> Stashed changes
+
 # Функция для приведения текста к единому языку (русский)
 def translate_to_russian(text):
     try:
@@ -304,7 +271,4 @@ def contains_sensitive_patterns(text):
     if re.search(email_pattern, text) or re.search(phone_pattern, text):
         return True
     return False
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
