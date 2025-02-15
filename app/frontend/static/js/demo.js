@@ -92,9 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
-            const isSuccess = result.success; 
+            const isConfidential = result.message && result.message.is_confidential;
             const messageText = result.message && result.message.text ? result.message.text : result.processed_text;
-            showResult(isSuccess, messageText);
+            showResult(!isConfidential, messageText);
         } catch (error) {
             showResult(false, 'Ошибка при проверке файла');
         }
@@ -123,9 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
-            const isSuccess = !result.success; // Invert the success flag
+            const isConfidential = result.message && result.message.is_confidential;
             const messageText = result.message && result.message.text ? result.message.text : result.processed_text;
-            showResult(isSuccess, messageText);
+            showResult(!isConfidential, messageText);
         } catch (error) {
             showResult(false, 'Ошибка при проверке текста');
         }
