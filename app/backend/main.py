@@ -68,13 +68,59 @@ def extract_text_from_docx(file_content: bytes) -> str:
         text += paragraph.text + "\n"
     return text
 
+def translate_to_english(text):
+    try:
+        detected_lang = detect(text)
+        if detected_lang != 'en':
+            return GoogleTranslator(source=detected_lang, target='en').translate(text)
+    except:
+        pass
+    return text
+
+# Функция для классификации
+def classify_message(text):
+    try:
+        # Translate to English for classification
+        english_text = translate_to_english(text)
+        
+        # Split text into smaller chunks that fit within BERT's limit
+        max_length = 500
+        words = english_text.split()
+        chunks = []
+        current_chunk = []
+        current_length = 0
+        
+        for word in words:
+            if current_length + len(word) < max_length:
+                current_chunk.append(word)
+                current_length += len(word)
+            else:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = [word]
+                current_length = len(word)
+        
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        # If any chunk is classified as confidential, the whole text is confidential
+        for chunk in chunks:
+            if chunk.strip():
+                result = classifier(chunk)
+                if int(result[0]['label'].split('_')[-1]):
+                    return 1
+        return 0
+    except Exception as e:
+        print(f"Classification error: {str(e)}")
+        return 0
+
 def extract_text_from_image(file_content: bytes) -> str:
     reader = easyocr.Reader(['ru', 'en'], gpu=False)
     image = Image.open(BytesIO(file_content))
     image_np = np.array(image)
     results = reader.readtext(image_np)
     text = '\n'.join([result[1] for result in results if result[1].strip()])
-    return text
+    # Ensure text is in Russian for consistency
+    return translate_to_russian(text)
 
 def extract_text_from_txt(file_content: bytes) -> str:
     return file_content.decode('utf-8')
