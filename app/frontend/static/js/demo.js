@@ -92,9 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
-            const isConfidential = result.is_confidential;
+            const isSuccess = result.success; 
             const messageText = result.message && result.message.text ? result.message.text : result.processed_text;
-            showResult(isConfidential, messageText);
+            showResult(isSuccess, messageText);
         } catch (error) {
             showResult(false, 'Ошибка при проверке файла');
         }
@@ -123,10 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
-            // Проверяем структуру ответа и передаем правильное значение
-            const isConfidential = result.message && result.message.is_confidential;
+            const isSuccess = !result.success; // Invert the success flag
             const messageText = result.message && result.message.text ? result.message.text : result.processed_text;
-            showResult(isConfidential, messageText);
+            showResult(isSuccess, messageText);
         } catch (error) {
             showResult(false, 'Ошибка при проверке текста');
         }
@@ -134,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showResult(isConfidential, message) {
         resultSection.style.display = 'block';
-        // Если текст конфиденциальный (true) - зеленый, если нет (false) - красный
+        // Если текст конфиденциальный (true) - красный, если нет (false) - зеленый
         statusIndicator.className = 'status-indicator ' + (isConfidential ? 'success' : 'error');
         
         const resultStatus = document.querySelector('.result-status');
