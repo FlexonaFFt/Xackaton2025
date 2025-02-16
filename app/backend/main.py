@@ -195,7 +195,7 @@ async def upload_file(
             user_id=user_id,
             original_text=extracted_text,
             processed_text=processed_text,
-            success=success
+            success=is_confidential
         )
         db.add(query)
         db.commit()
