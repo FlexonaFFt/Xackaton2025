@@ -195,7 +195,7 @@ async def upload_file(
             user_id=user_id,
             original_text=extracted_text,
             processed_text=processed_text,
-            success=is_confidential
+            success=bool(is_confidential)
         )
         db.add(query)
         db.commit()
@@ -251,7 +251,7 @@ async def process_text(
             user_id=text_request.user_id,
             original_text=text_request.text,
             processed_text=processed_text,
-            success=is_confidential
+            success=bool(is_confidential)
         )
         db.add(query)
         db.commit()
