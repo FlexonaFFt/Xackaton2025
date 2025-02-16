@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, Form, File, UploadFile, HTTPException
 from pydantic import BaseModel
 from fastapi import Request
@@ -5,14 +6,16 @@ from fastapi import Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from routers import items, users
-from routers import queries  
 from sqlalchemy.orm import Session
 from docx import Document
 from io import BytesIO
 from PIL import Image
 import numpy as np
-import models, database
+import backend.models as models
+import backend.database as database
+import backend.items as items
+import backend.users as users
+import backend.queries as queries
 import os, random, easyocr, PyPDF2
 import re
 from langdetect import detect

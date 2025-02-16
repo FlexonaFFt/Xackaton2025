@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_  
 from typing import List
 from pydantic import BaseModel  
-import database
-import models
-import random  
+import backend.models as models
+import backend.database as database
+import backend.items as items
+import backend.users as users
 from datetime import datetime, timedelta
 
 router = APIRouter(
