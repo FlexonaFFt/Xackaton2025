@@ -251,7 +251,7 @@ async def process_text(
             user_id=text_request.user_id,
             original_text=text_request.text,
             processed_text=processed_text,
-            success=success
+            success=is_confidential
         )
         db.add(query)
         db.commit()
