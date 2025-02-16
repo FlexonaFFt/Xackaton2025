@@ -70,7 +70,7 @@ function updateQueriesTable(data) {
             <div class="table-cell">${query.id || 'N/A'}</div>
             <div class="table-cell">${query.info || 'Нет информации'}</div>
             <div class="table-cell ${query.is_confidential ? 'status-failed' : 'status-success'}">
-                ${query.is_confidential ? 'Конфиденциально' : 'Не прошло проверку'}
+                ${query.is_confidential ? 'Конфиденциально' : 'Не конфиденциально'}
             </div>
             <div class="table-cell query-text">${query.query || 'Нет текста запроса'}</div>
         `;
