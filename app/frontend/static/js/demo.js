@@ -133,12 +133,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showResult(isConfidential, message) {
         resultSection.style.display = 'block';
-        // Если текст конфиденциальный (true) - красный, если нет (false) - зеленый
-        statusIndicator.className = 'status-indicator ' + (isConfidential ? 'success' : 'error');
+        statusIndicator.className = 'status-indicator ' + (isConfidential ? 'error' : 'success');
         
         const resultStatus = document.querySelector('.result-status');
-        resultStatus.textContent = isConfidential ? 'Запрос прошел проверку' : 'Запрос не прошел проверку';
-        resultStatus.className = 'result-status ' + (isConfidential ? 'success-text' : 'error-text');
+        resultStatus.textContent = isConfidential ? 'Конфиденциально' : 'Не конфиденциально';
+        resultStatus.className = 'result-status ' + (isConfidential ? 'error-text' : 'success-text');
         
         resultText.textContent = message || 'Нет сообщения';
     }
