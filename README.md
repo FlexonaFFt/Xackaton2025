@@ -8,6 +8,10 @@
   <img src="images/1.png" alt="Демонстрация работы системы" width="800"/>
 </div>
 
+<p align="center">
+  <a href="http://89.111.169.159:8000">Ссылка на веб-приложение</a>
+</p>
+
 ### 🎯 Ключевые особенности:
 
 - ✨ Поддержка множества форматов файлов (PDF, DOCX, TXT, PNG, JPG)
@@ -124,7 +128,7 @@ Run these commands in your terminal:
 
 ```bash
 # Build the Docker image
-docker build -t xackaton-solution .
+docker build -t xackaton-latest .
 
 # Run the container
-docker run -p 8000:8000 xackaton-solution
+docker run -p 8000:8000 xackaton-latest
