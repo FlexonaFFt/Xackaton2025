@@ -358,7 +358,6 @@ def contains_sensitive_patterns(text):
     #address_pattern = r"(ул|ул.|улица|пер|пер.|переулок|пр|пр.|проспект|д|д.|кв|кв.|квартира|обл|область|г|город|пос|поселок|бул|бульвар|наб|набережная|аллея|проезд|шоссе)\s*\.?\s*[-№0-9а-яА-Я]+"
     
     if (re.search(email_pattern, text, re.IGNORECASE) or 
-        re.search(phone_pattern, text) or 
-        re.search(address_pattern, text, re.IGNORECASE | re.UNICODE)):
+        re.search(phone_pattern, text)):
         return True
     return False
