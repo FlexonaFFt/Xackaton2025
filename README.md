@@ -116,4 +116,15 @@
 
 </details>
 
-## Запуск Docker образа
+## 🐳 Docker Deployment Guide
+
+### 🚀 Quick Start
+
+Run these commands in your terminal:
+
+```bash
+# Build the Docker image
+docker build -t xackaton-solution .
+
+# Run the container
+docker run -p 8000:8000 xackaton-solution
